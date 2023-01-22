@@ -2,6 +2,10 @@
 name = "sourmash_plugin_sketchall"
 requires-python = ">=3.8"
 version = "0.1"
+requires
+
+[build-system]
+requires = ["snakemake", "sourmash>=4.6.1"]
 
 [metadata]
 license = { text = "BSD 3-Clause License" }

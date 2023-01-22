@@ -1,0 +1,10 @@
+[project]
+name = "sourmash_plugin_sketchall"
+requires-python = ">=3.8"
+version = "0.1"
+
+[metadata]
+license = { text = "BSD 3-Clause License" }
+
+[project.entry-points."sourmash.cli_script"]
+sketchall = "sourmash_plugin_sketchall:Command_SketchAll"

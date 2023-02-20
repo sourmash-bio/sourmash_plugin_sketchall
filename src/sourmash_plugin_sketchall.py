@@ -8,7 +8,7 @@ IDEAS:
 """
 import os
 import sys
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 
 import screed
 import sourmash
@@ -66,7 +66,7 @@ class Command_SketchAll(plugins.CommandLinePlugin):
 
         # run things in parallel:
         if args.cores > 1:
-            with ProcessPoolExecutor(max_workers=args.cores) as executor:
+            with ThreadPoolExecutor(max_workers=args.cores) as executor:
                 for filename in FILES:
                     executor.submit(compute_sig, factories, filename,
                                     extension=args.extension,

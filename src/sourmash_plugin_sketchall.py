@@ -32,6 +32,7 @@ class Command_SketchAll(plugins.CommandLinePlugin):
                        choices={ "sig", "sig.gz", "zip", "sqldb" })
         p.add_argument('-p', '--param-string', default=['dna'],
                        help='signature parameters to use.', action='append')
+        p.add_argument('-o', '--outdir', '--output-directory')
 
     def main(self, args):
         super().main(args)
@@ -68,14 +69,18 @@ class Command_SketchAll(plugins.CommandLinePlugin):
             with ProcessPoolExecutor(max_workers=args.cores) as executor:
                 for filename in FILES:
                     executor.submit(compute_sig, factories, filename,
-                                    extension=args.extension)
+                                    extension=args.extension,
+                                    outdir=args.outdir)
         else:
             notify(f"NOTE: running in serial mode, not parallel, because cores={args.cores}")
             for filename in FILES:
                 compute_sig(factories, filename, extension=args.extension)
 
 
-def compute_sig(factories, filename, *, extension='sig.gz'):
+def compute_sig(factories, filename, *, extension='sig.gz', outdir=None):
+    "Build one set of sketches for the given filename."
+    assert outdir is None
+
     sigfile = filename + '.' + extension
 
     with screed.open(filename) as screed_iter:

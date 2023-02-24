@@ -15,7 +15,7 @@ import sourmash
 from sourmash import plugins
 from sourmash.logging import debug_literal, notify
 from sourmash.command_sketch import _signatures_for_sketch_factory
-from sourmash.command_compute import add_seq
+from sourmash.command_compute import add_seq, set_sig_name
 from sourmash import sourmash_args
 
 
@@ -82,32 +82,40 @@ def compute_sig(factories, filename, *, extension='sig.gz', outdir=None):
     assert outdir is None
 
     sigfile = filename + '.' + extension
+    name = None
 
-    with screed.open(filename) as screed_iter:
-        if not screed_iter:
-            notify(f"no sequences found in '{filename}'?!")
-            return
-
-        sigslist = [ f() for f in factories ]
-
-        for n, record in enumerate(screed_iter):
-            if n % 10000 == 0:
-                if n:
-                    notify('\r...{} {}', filename, n, end='')
-
-            try:
-                for sigs in sigslist:
-                    add_seq(sigs, record.sequence, False, False)
-            except ValueError as exc:
-                error(f"ERROR when reading from '{filename}' - ")
-                error(str(exc))
+    try:
+        with screed.open(filename) as screed_iter:
+            if not screed_iter:
+                notify(f"no sequences found in '{filename}'?!")
                 return
 
-            notify('...{} {} sequences', filename, n, end='')
+            sigslist = [ f() for f in factories ]
 
-        with sourmash_args.SaveSignaturesToLocation(sigfile) as save_sig:
-            for sigs in sigslist:
-                for ss in sigs:
-                    save_sig.add(ss)
+            for n, record in enumerate(screed_iter):
+                if n % 10000 == 0:
+                    if n:
+                        notify('\r...{} {}', filename, n, end='')
 
-        notify(f'saved {len(save_sig)} sketch(es) for {filename} to {sigfile}')
+                try:
+                    for sigs in sigslist:
+                        add_seq(sigs, record.sequence, False, False)
+
+                    name = record.name
+                except ValueError as exc:
+                    error(f"ERROR when reading from '{filename}' - ")
+                    error(str(exc))
+                    return
+
+                notify('...{} {} sequences', filename, n, end='')
+
+    except ValueError:
+        return
+
+    with sourmash_args.SaveSignaturesToLocation(sigfile) as save_sig:
+        for sigs in sigslist:
+            set_sig_name(sigs, filename, name)
+            for ss in sigs:
+                save_sig.add(ss)
+
+    notify(f'saved {len(save_sig)} sketch(es) for {filename} to {sigfile}')

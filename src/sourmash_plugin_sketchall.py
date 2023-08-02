@@ -1,13 +1,28 @@
 #! /usr/bin/env python
-"""
-@@
+"""\
+sketch many genomes efficiently using multiple threads.
 
-IDEAS:
-- support taking in a CSV or file list instead?
-- support ignoring or limiting to a particular extension
+By default, 'sketchall' ignores files ending in '.sig', '.sig.gz',
+'.zip', '.sqldb', and attempts to sketch all other files.
 """
+
+usage="""
+   sourmash scripts sketchall <directory>
+"""
+
+epilog="""
+See https://github.com/sourmash-bio/sourmash_plugin_sketchall for examples.
+
+Need help? Have questions? Ask at http://github.com/sourmash/issues!
+"""
+
+#IDEAS:
+#- support taking in a CSV or file list instead?
+#- support ignoring or limiting to a particular extension
+
 import os
 import sys
+import argparse
 from concurrent.futures import ThreadPoolExecutor
 
 import screed
@@ -21,26 +36,33 @@ from sourmash import sourmash_args
 
 class Command_SketchAll(plugins.CommandLinePlugin):
     command = 'sketchall'
-    description = "sketch many genomes"
+    description = ""
+
+    description = __doc__
+    usage = usage
+    epilog = epilog
+    formatter_class = argparse.RawTextHelpFormatter
 
     def __init__(self, p):
         super().__init__(p)
-        p.add_argument('location')
+        p.add_argument('directory',
+                       help="directory to @CTB xyz")
         p.add_argument('-j', '-c', '--cores', type=int, default=4,
                        help="number of processes/cores to use")
         p.add_argument('--extension', default='sig.gz',
                        choices={ "sig", "sig.gz", "zip", "sqldb" })
         p.add_argument('-p', '--param-string', default=['dna'],
                        help='signature parameters to use.', action='append')
-        p.add_argument('-o', '--outdir', '--output-directory')
+        p.add_argument('-o', '--outdir', '--output-directory',
+                       help="where to put calculated signatures @CTB xzy")
 
     def main(self, args):
         super().main(args)
-        debug_literal(f"sketchall main: location is {args.location}")
+        debug_literal(f"sketchall main: location is {args.directory}")
 
         debug = 1 if args.debug else 0
 
-        # build params obj
+        # build params obj & sketching factories
         factories = []
         for p in args.param_string:
             f = _signatures_for_sketch_factory(args.param_string, 'dna')
@@ -49,7 +71,7 @@ class Command_SketchAll(plugins.CommandLinePlugin):
         # find all files that are not sketches, run 'em
         FILES = []
         ignore_exts = { '.sig', '.sig.gz', '.zip', '.sqldb' }
-        for root, dirs, files in os.walk(args.location, topdown=False):
+        for root, dirs, files in os.walk(args.directory, topdown=False):
             for name in files:
 
                 keep = True
@@ -63,6 +85,9 @@ class Command_SketchAll(plugins.CommandLinePlugin):
                     FILES.append(filename)
 
         debug_literal(f"found {len(FILES)} files.")
+
+        # @CTB break out/error out if nothing there
+        # @CTB check if it's a directory?
 
         # run things in parallel:
         if args.cores > 1:

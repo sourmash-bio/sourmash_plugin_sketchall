@@ -19,6 +19,7 @@ Need help? Have questions? Ask at http://github.com/sourmash/issues!
 #IDEAS:
 #- support taking in a CSV or file list instead?
 #- support ignoring or limiting to a particular extension
+#- support multiple toplevel directories
 
 import os
 import sys
@@ -47,7 +48,7 @@ class Command_SketchAll(plugins.CommandLinePlugin):
     def __init__(self, p):
         super().__init__(p)
         p.add_argument('directory',
-                       help="directory to @CTB xyz")
+                       help="directory containing files to sketch")
         p.add_argument('-j', '-c', '--cores', type=int, default=4,
                        help="number of processes/cores to use")
         p.add_argument('--extension', default='zip',
@@ -133,6 +134,7 @@ class Command_SketchAll(plugins.CommandLinePlugin):
                             verbose=args.verbose)
 
         # @CTB number sketched?
+        # @CTB report errors?
 
 
 def compute_sig(factories, toplevel, relpath, *, extension='zip', outdir=None,

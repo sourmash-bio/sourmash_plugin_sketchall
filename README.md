@@ -25,8 +25,8 @@ By default, `sketchall` will save signatures in place: sketches for
 for `examples/subdir/2.fa.gz` are saved to
 `examples/subdir/2.fa.gz.zip`.
 
-With `-o/--output-directory`, `sketchall` will create a new hierarchy
-of directories; so, for example,
+With `-o/--output-directory`, `sketchall` will sketch into a new hierarchy
+of files; so, for example,
 ```shell
 sourmash scripts sketchall examples -o sigs/
 ```

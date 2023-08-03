@@ -23,12 +23,13 @@ Need help? Have questions? Ask at http://github.com/sourmash/issues!
 import os
 import sys
 import argparse
+import pathlib
 from concurrent.futures import ThreadPoolExecutor
 
 import screed
 import sourmash
 from sourmash import plugins
-from sourmash.logging import debug_literal, notify
+from sourmash.logging import debug_literal, notify, error
 from sourmash.command_sketch import _signatures_for_sketch_factory
 from sourmash.command_compute import add_seq, set_sig_name
 from sourmash import sourmash_args
@@ -49,7 +50,7 @@ class Command_SketchAll(plugins.CommandLinePlugin):
                        help="directory to @CTB xyz")
         p.add_argument('-j', '-c', '--cores', type=int, default=4,
                        help="number of processes/cores to use")
-        p.add_argument('--extension', default='sig.gz',
+        p.add_argument('--extension', default='zip',
                        choices={ "sig", "sig.gz", "zip", "sqldb" })
         p.add_argument('-p', '--param-string', default=['dna'],
                        help='signature parameters to use.', action='append')
@@ -71,48 +72,67 @@ class Command_SketchAll(plugins.CommandLinePlugin):
         # find all files that are not sketches, run 'em
         FILES = []
         ignore_exts = { '.sig', '.sig.gz', '.zip', '.sqldb' }
-        for root, dirs, files in os.walk(args.directory, topdown=False):
-            for name in files:
+
+        toplevel = args.directory
+        for filepath in pathlib.Path(toplevel).rglob('*'):
+            if filepath.is_file():
+                relpath = filepath.relative_to(toplevel)
+                relpath = relpath.as_posix()
 
                 keep = True
                 for ext in ignore_exts:
-                    if name.endswith(ext):
+                    if relpath.endswith(ext):
                         keep = False
                         break
 
                 if keep:
-                    filename = os.path.join(root, name)
-                    FILES.append(filename)
+                    FILES.append((toplevel, relpath))
 
         debug_literal(f"found {len(FILES)} files.")
 
         # @CTB break out/error out if nothing there
         # @CTB check if it's a directory?
 
+        outdir = args.outdir
+        if outdir and not os.path.isdir(args.outdir):
+            try:
+                debug_literal(f"trying to make {outdir}")
+                os.mkdir(outdir)
+            except:
+                error(f"Cannot make output directory '{outdir}'; exiting.")
+                sys.exit(-1)
+
+        notify(f"Starting to sketch {len(FILES)} files with {args.cores} threads.")
         # run things in parallel:
         if args.cores > 1:
             with ThreadPoolExecutor(max_workers=args.cores) as executor:
-                for filename in FILES:
-                    executor.submit(compute_sig, factories, filename,
+                for (toplevel, relpath) in FILES:
+                    executor.submit(compute_sig, factories, toplevel, relpath,
                                     extension=args.extension,
-                                    outdir=args.outdir)
+                                    outdir=outdir)
         else:
             notify(f"NOTE: running in serial mode, not parallel, because cores={args.cores}")
-            for filename in FILES:
-                compute_sig(factories, filename, extension=args.extension)
+            for (toplevel, relpath) in FILES:
+                compute_sig(factories, toplevel, relpath,
+                            extension=args.extension, outdir=outdir)
 
 
-def compute_sig(factories, filename, *, extension='sig.gz', outdir=None):
+def compute_sig(factories, toplevel, relpath, *, extension='zip', outdir=None):
     "Build one set of sketches for the given filename."
-    assert outdir is None
+    sigfile = relpath + '.' + extension
+    if outdir:
+        sigfile = os.path.join(outdir, sigfile)
+    else:
+        sigfile = os.path.join(toplevel, sigfile)
 
-    sigfile = filename + '.' + extension
+    filename = os.path.join(toplevel, relpath)
+    debug_literal(f"processing '{filename}' => '{sigfile}'")
+
     name = None
-
     try:
         with screed.open(filename) as screed_iter:
             if not screed_iter:
-                notify(f"no sequences found in '{filename}'?!")
+                notify(f"no sequences found in '{filename}'; skipping.")
                 return
 
             sigslist = [ f() for f in factories ]
@@ -143,4 +163,4 @@ def compute_sig(factories, filename, *, extension='sig.gz', outdir=None):
             for ss in sigs:
                 save_sig.add(ss)
 
-    notify(f'saved {len(save_sig)} sketch(es) for {filename} to {sigfile}')
+    debug_literal(f'saved {len(save_sig)} sketch(es) for {filename} to {sigfile}')

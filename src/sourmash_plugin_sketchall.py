@@ -102,7 +102,9 @@ class Command_SketchAll(plugins.CommandLinePlugin):
 
         debug_literal(f"found {len(FILES)} files.")
 
-        # @CTB break out/error out if nothing there
+        if not FILES:
+            error("No files found to sketch!? Exiting.")
+            sys.exit(-1)
 
         # create hierarchy of subdirectories if needed.
         outdir = args.outdir
@@ -122,24 +124,47 @@ class Command_SketchAll(plugins.CommandLinePlugin):
         # run things in parallel:
         if args.cores > 1:
             with ThreadPoolExecutor(max_workers=args.cores) as executor:
+                futures = []
                 for (toplevel, relpath) in FILES:
-                    executor.submit(compute_sig, factories, toplevel, relpath,
-                                    extension=args.extension,
-                                    outdir=outdir, verbose=args.verbose)
+                    f = executor.submit(compute_sig, factories, toplevel,
+                                        relpath,
+                                        extension=args.extension,
+                                        outdir=outdir, verbose=args.verbose)
+                    futures.append(f)
+
+                results = []
+                for f in futures:
+                    results.append(f.result())
+
         else:
             notify(f"NOTE: running in serial mode, not parallel, because cores={args.cores}")
+            results = []
             for (toplevel, relpath) in FILES:
-                compute_sig(factories, toplevel, relpath,
-                            extension=args.extension, outdir=outdir,
-                            verbose=args.verbose)
+                result = compute_sig(factories, toplevel, relpath,
+                                     extension=args.extension, outdir=outdir,
+                                     verbose=args.verbose)
 
-        # @CTB number sketched?
-        # @CTB report errors?
+                results.append(result)
+
+
+        skipped = 0
+        total = 0
+        for result in results:
+            if result is None:
+                skipped += 1
+            else:
+                assert result > 0
+                total += result
+
+        notify(f"Produced {total} sketches total for {len(FILES)} input files.")
+        if skipped:
+            notify(f"Skipped {skipped} input files for various reasons.")
 
 
 def compute_sig(factories, toplevel, relpath, *, extension='zip', outdir=None,
                 verbose=False):
     "Build a set of sketches for the given filename."
+    # CTB: maybe always raise an exception with error?
     sigfile = relpath + '.' + extension
     if outdir:
         sigfile = os.path.join(outdir, sigfile)
@@ -154,9 +179,8 @@ def compute_sig(factories, toplevel, relpath, *, extension='zip', outdir=None,
     try:
         with screed.open(filename) as screed_iter:
             if not screed_iter:
-                if verbose:
-                    notify(f"no sequences found in '{filename}'; skipping.")
-                return
+                notify(f"no sequences found in '{filename}'; skipping.")
+                return None
 
             sigslist = [ f() for f in factories ]
 
@@ -173,13 +197,13 @@ def compute_sig(factories, toplevel, relpath, *, extension='zip', outdir=None,
                 except ValueError as exc:
                     error(f"ERROR when reading from '{filename}' - ")
                     error(str(exc))
-                    return
+                    return None
 
             if verbose:
                 notify('...{} {} sequences', filename, n + 1)
 
     except ValueError:
-        return
+        return None
 
     with sourmash_args.SaveSignaturesToLocation(sigfile) as save_sig:
         for sigs in sigslist:
@@ -188,3 +212,4 @@ def compute_sig(factories, toplevel, relpath, *, extension='zip', outdir=None,
                 save_sig.add(ss)
 
     debug_literal(f'saved {len(save_sig)} sketch(es) for {filename} to {sigfile}')
+    return len(save_sig)

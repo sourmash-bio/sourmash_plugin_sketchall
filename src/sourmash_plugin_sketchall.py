@@ -2,6 +2,9 @@
 """\
 sketch many genomes efficiently using multiple threads.
 
+The sketchall plugin discovers sequence files to sketch in a directory
+hierarchy, and speeds up sketching using multiple threads.
+
 By default, 'sketchall' ignores files ending in '.sig', '.sig.gz',
 '.zip', '.sqldb', and attempts to sketch all other files.
 """

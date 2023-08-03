@@ -2,6 +2,10 @@
 
 Sketch many files at once with sourmash, using threads.
 
+The `sketchall` plugin is a convenient way to:
+* automatically discover & sketch many sequence files in a directory hierarchy.
+* speed up sketching using multiple threads.
+
 ## Installation
 
 ```

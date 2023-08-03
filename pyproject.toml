@@ -1,5 +1,6 @@
 [project]
 name = "sourmash_plugin_sketchall"
+readme = "README.md"
 description = "sourmash plugin to sketch many sequence files"
 requires-python = ">=3.8"
 version = "0.2"

@@ -2,9 +2,8 @@
 Tests for sourmash_plugin_xyz.
 """
 
-# CTB: test
+# CTB: test TODO:
 # - pattern
-# - -p param string
 # sig cat advice
 
 import os

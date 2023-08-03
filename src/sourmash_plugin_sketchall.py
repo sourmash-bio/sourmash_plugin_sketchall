@@ -55,7 +55,9 @@ class Command_SketchAll(plugins.CommandLinePlugin):
         p.add_argument('-p', '--param-string', default=['dna'],
                        help='signature parameters to use.', action='append')
         p.add_argument('-o', '--outdir', '--output-directory',
-                       help="where to put calculated signatures @CTB xzy")
+                       help="put created files under this location, instead of in place")
+        p.add_argument('-v', '--verbose', action='store_true',
+                       help='turn on verbose reporting')
 
     def main(self, args):
         super().main(args)
@@ -74,8 +76,12 @@ class Command_SketchAll(plugins.CommandLinePlugin):
         ignore_exts = { '.sig', '.sig.gz', '.zip', '.sqldb' }
 
         toplevel = args.directory
+        dirpaths = ['']
         for filepath in pathlib.Path(toplevel).rglob('*'):
-            if filepath.is_file():
+            if filepath.is_dir():
+                # track directories we may need to create under output.
+                dirpaths.append(filepath.relative_to(toplevel).as_posix())
+            elif filepath.is_file():
                 relpath = filepath.relative_to(toplevel)
                 relpath = relpath.as_posix()
 
@@ -91,16 +97,20 @@ class Command_SketchAll(plugins.CommandLinePlugin):
         debug_literal(f"found {len(FILES)} files.")
 
         # @CTB break out/error out if nothing there
-        # @CTB check if it's a directory?
 
+        # create hierarchy of subdirectories if needed.
         outdir = args.outdir
-        if outdir and not os.path.isdir(args.outdir):
-            try:
-                debug_literal(f"trying to make {outdir}")
-                os.mkdir(outdir)
-            except:
-                error(f"Cannot make output directory '{outdir}'; exiting.")
-                sys.exit(-1)
+        if outdir:
+            for dirpath in sorted(dirpaths):
+                dp = os.path.join(args.outdir, dirpath)
+                if os.path.exists(dp):
+                    continue
+                try:
+                    debug_literal(f"trying to make {dp}")
+                    os.mkdir(dp)
+                except:
+                    error(f"Cannot make output directory '{dp}'; exiting.")
+                    sys.exit(-1)
 
         notify(f"Starting to sketch {len(FILES)} files with {args.cores} threads.")
         # run things in parallel:
@@ -109,16 +119,20 @@ class Command_SketchAll(plugins.CommandLinePlugin):
                 for (toplevel, relpath) in FILES:
                     executor.submit(compute_sig, factories, toplevel, relpath,
                                     extension=args.extension,
-                                    outdir=outdir)
+                                    outdir=outdir, verbose=args.verbose)
         else:
             notify(f"NOTE: running in serial mode, not parallel, because cores={args.cores}")
             for (toplevel, relpath) in FILES:
                 compute_sig(factories, toplevel, relpath,
-                            extension=args.extension, outdir=outdir)
+                            extension=args.extension, outdir=outdir,
+                            verbose=args.verbose)
+
+        # @CTB number sketched?
 
 
-def compute_sig(factories, toplevel, relpath, *, extension='zip', outdir=None):
-    "Build one set of sketches for the given filename."
+def compute_sig(factories, toplevel, relpath, *, extension='zip', outdir=None,
+                verbose=False):
+    "Build a set of sketches for the given filename."
     sigfile = relpath + '.' + extension
     if outdir:
         sigfile = os.path.join(outdir, sigfile)
@@ -126,20 +140,22 @@ def compute_sig(factories, toplevel, relpath, *, extension='zip', outdir=None):
         sigfile = os.path.join(toplevel, sigfile)
 
     filename = os.path.join(toplevel, relpath)
-    debug_literal(f"processing '{filename}' => '{sigfile}'")
+    if verbose:
+        notify(f"sketching '{filename}' => '{sigfile}'")
 
     name = None
     try:
         with screed.open(filename) as screed_iter:
             if not screed_iter:
-                notify(f"no sequences found in '{filename}'; skipping.")
+                if verbose:
+                    notify(f"no sequences found in '{filename}'; skipping.")
                 return
 
             sigslist = [ f() for f in factories ]
 
             for n, record in enumerate(screed_iter):
                 if n % 10000 == 0:
-                    if n:
+                    if n and verbose:
                         notify('\r...{} {}', filename, n, end='')
 
                 try:
@@ -152,7 +168,8 @@ def compute_sig(factories, toplevel, relpath, *, extension='zip', outdir=None):
                     error(str(exc))
                     return
 
-                notify('...{} {} sequences', filename, n, end='')
+            if verbose:
+                notify('...{} {} sequences', filename, n + 1)
 
     except ValueError:
         return

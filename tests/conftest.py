@@ -15,3 +15,7 @@ def runtmp():
 @pytest.fixture(params=['1', '4', '8'])
 def cores(request):
     return request.param
+
+@pytest.fixture(params=['zip', 'sqldb', 'sig.gz', 'sig'])
+def use_extension(request):
+    return request.param

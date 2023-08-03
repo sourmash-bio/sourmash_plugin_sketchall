@@ -52,6 +52,8 @@ class Command_SketchAll(plugins.CommandLinePlugin):
                        help="number of processes/cores to use")
         p.add_argument('--extension', default='zip',
                        choices={ "sig", "sig.gz", "zip", "sqldb" })
+        p.add_argument('--pattern', default='*',
+                       help="wildcard pattern to match for input files")
         p.add_argument('-p', '--param-string', default=['dna'],
                        help='signature parameters to use.', action='append')
         p.add_argument('-o', '--outdir', '--output-directory',
@@ -77,7 +79,8 @@ class Command_SketchAll(plugins.CommandLinePlugin):
 
         toplevel = args.directory
         dirpaths = ['']
-        for filepath in pathlib.Path(toplevel).rglob('*'):
+        notify(f"finding all input files under '{toplevel}' with pattern '{args.pattern}'")
+        for filepath in pathlib.Path(toplevel).rglob(args.pattern):
             if filepath.is_dir():
                 # track directories we may need to create under output.
                 dirpaths.append(filepath.relative_to(toplevel).as_posix())

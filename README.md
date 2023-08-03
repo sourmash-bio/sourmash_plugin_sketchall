@@ -15,7 +15,8 @@ The following command:
 sourmash scripts sketchall examples -j 8
 ```
 will use 8 threads to (attempt to) sketch all of the files
-underneath `examples`.  Filenames ending in `.sig` or `.sig.gz` will
+underneath `examples`.  Filenames ending in `.sig`, `.sig.gz`,
+`.zip`, and `.sqldb` will
 be ignored, and failed files will be reported (but failures will be
 ignored).
 
@@ -29,14 +30,19 @@ of directories; so, for example,
 ```shell
 sourmash scripts sketchall examples -o sigs/
 ```
-will save the sketch for `examples/subdir/1.fa.gz` to `sigs/subdir/1.fa.gz`.
+will save the sketch for `examples/subdir/2.fa.gz` to `sigs/subdir/2.fa.gz`.
 
 The default signature format for `sketchall` is `.zip`. This can be changed
 by using `--extension`:
 ```shell
 sourmash scripts sketchall examples -o sigs/ --extension .sig.gz
 ```
-will create `sigs/10.fa.gz.sig.gz` and `sigs/subdir/1.fa.gz.sig.gz`.
+will create `sigs/10.fa.gz.sig.gz` and `sigs/subdir/2.fa.gz.sig.gz`.
+
+The pattern for files to sketch can be set by using `--pattern`:
+```shell
+sourmash scripts sketchall examples --pattern "2.*.gz"
+```
 
 After `sketchall`, `sourmash sig cat` can be used to collect all of the
 sketches into a single zip file, e.g.

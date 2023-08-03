@@ -55,6 +55,18 @@ sketches into a single zip file, e.g.
 sourmash sig cat sigs -o all-sigs.zip
 ```
 
+## Benchmarks and speedups
+
+On a small collection of 64 genomes, using 4-8 threads more than
+doubles the speed of sketching - for larger files, speedups should
+approach linear scaling.
+
+Wall time (s) | Threads | Efficiency
+-- | -- | --
+6 | 1 | 106%
+2.84 | 4 | 306%
+2.41 | 8 | 321%
+
 ## Support
 
 We suggest filing issues in

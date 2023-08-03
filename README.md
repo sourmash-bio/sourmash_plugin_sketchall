@@ -44,6 +44,11 @@ The pattern for files to sketch can be set by using `--pattern`:
 sourmash scripts sketchall examples --pattern "2.*.gz"
 ```
 
+The parameter string used to sketch files can be changed with `-p/--param-string`:
+```
+sourmash scripts sketchall examples -p k=21 examples/ -o output.k21
+```
+
 After `sketchall`, `sourmash sig cat` can be used to collect all of the
 sketches into a single zip file, e.g.
 ```shell

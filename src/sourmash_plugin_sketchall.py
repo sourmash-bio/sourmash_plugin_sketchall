@@ -54,7 +54,7 @@ class Command_SketchAll(plugins.CommandLinePlugin):
                        choices={ "sig", "sig.gz", "zip", "sqldb" })
         p.add_argument('--pattern', default='*',
                        help="wildcard pattern to match for input files")
-        p.add_argument('-p', '--param-string', default=['dna'],
+        p.add_argument('-p', '--param-string', default=[],
                        help='signature parameters to use.', action='append')
         p.add_argument('-o', '--outdir', '--output-directory',
                        help="put created files under this location, instead of in place")
@@ -69,6 +69,8 @@ class Command_SketchAll(plugins.CommandLinePlugin):
 
         # build params obj & sketching factories
         factories = []
+        if not args.param_string:
+            args.param_string.append('dna')
         for p in args.param_string:
             f = _signatures_for_sketch_factory(args.param_string, 'dna')
             factories.append(f)

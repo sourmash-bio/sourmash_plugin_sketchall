@@ -1,6 +1,12 @@
 """
 Tests for sourmash_plugin_xyz.
 """
+
+# CTB: test
+# - pattern
+# - -p param string
+# sig cat advice
+
 import os
 import pytest
 import shutil
